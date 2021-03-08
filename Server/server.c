@@ -22,6 +22,8 @@
 #define MAXBUF   8192  /* Max I/O buffer size */
 #define LISTENQ  1024  /* Second argument to listen() */
 
+
+
 typedef struct {
     int *buf;          /* Buffer array */
     int n;             /* Maximum number of slots */
@@ -84,6 +86,13 @@ int sbuf_remove(sbuf_t *sp)
     return item;
 }
 
+struct fbuf{
+    char filename[MAXLINE];
+    FILE* filefd;
+    int status;
+    sbuf_t accessmgr;
+};
+
 int open_listenfd(char *port)
 {
     struct addrinfo hints, *listp, *p;
@@ -137,8 +146,10 @@ int open_listenfd(char *port)
 
 sbuf_t sbuf; /* Shared buffer of connected descriptors */
 
-void echo_cnt(int connfd);
+void process(int connfd);
 void *thread(void *vargp);
+
+struct fbuf file_table[4];
 
 int main(int argc, const char * argv[]) {
     // insert code here...
@@ -170,8 +181,60 @@ void *thread(void *vargp)
     pthread_detach(pthread_self()); 
     while (1) { 
 	int connfd = sbuf_remove(&sbuf); /* Remove connfd from buffer */ //line:conc:pre:removeconnfd
-	//echo_cnt(connfd);                /* Service client */
+	process(connfd);                /* Service client */
     printf("Connected\n");
 	close(connfd);
     }
+};
+
+void process(int connfd){
+    size_t n;
+    int i = 0;
+    int size;
+    char input[MAXLINE];
+    float result;
+    char* filename; 
+    char* date;
+    char* buffer;
+    char* spliter = " \n";
+    char output[MAXLINE];
+    char buf2[MAXLINE];
+
+    while((n = read(connfd, input, MAXLINE)) != 0){
+        printf("%s\n", &input[1]);
+        
+        buffer = strtok(input, spliter);
+        if(strcmp(buffer, "openRead")==0){
+            filename = strtok(NULL, spliter);
+            file_table[0].filefd = fopen(filename, "r");
+            continue;
+        }
+        if(strcmp(buffer, "openAppend")==0){
+            filename = strtok(NULL, spliter);
+            file_table[0].filefd = fopen(filename, "a+");
+            continue;
+        }
+        if(strcmp(buffer, "read")==0){
+            buffer = strtok(NULL, spliter);
+            int readlen = atoi(buffer);
+            fgets(buf2, readlen, file_table[0].filefd);
+            sprintf(output, "%s\n", buf2);
+        }
+        if(strcmp(buffer, "append")==0){
+            buffer = strtok(NULL, spliter);
+            fputs(buffer, file_table[0].filefd);
+            continue;
+        }
+        if(strcmp(buffer, "close")==0){
+            fclose(file_table[0].filefd);
+            continue;
+        }
+
+        write(connfd, output, strlen(output));
+        for(i =0 ; i< MAXLINE;i++){
+            input[i] = '\0';
+            output[i] = '\0';
+        }
+    }
+    
 };
