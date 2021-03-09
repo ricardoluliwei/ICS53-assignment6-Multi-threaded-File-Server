@@ -94,13 +94,6 @@ int sbuf_remove(sbuf_t *sp)
     return item;
 }
 
-struct OFT_Entry{
-    char filename[MAXLINE];
-    FILE* fd;
-    sem_t mutex[2]; // mutex[0] is for reading, mutex[1] is for writing
-    int ref_num; // number of reference
-};
-
 int open_listenfd(char *port)
 {
     struct addrinfo hints, *listp, *p;
@@ -153,8 +146,8 @@ int open_listenfd(char *port)
 }
 
 sbuf_t sbuf; /* Shared buffer of connected descriptors */
-struct OFT_Entry file_table[4];
-// sem_t OFT_mutex;
+OFT_Entry file_table[4];
+sem_t OFT_mutex;
 
 void process(int connfd);
 void *thread(void *vargp);
