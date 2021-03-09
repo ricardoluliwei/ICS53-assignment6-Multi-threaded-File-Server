@@ -22,6 +22,9 @@
 #define MAXBUF   8192  /* Max I/O buffer size */
 #define LISTENQ  1024  /* Second argument to listen() */
 
+#define APPENDING "a"
+#define READING "r"
+
 typedef struct {
     int *buf;          /* Buffer array */
     int n;             /* Maximum number of slots */
@@ -33,12 +36,12 @@ typedef struct {
 } sbuf_t;
 /* $end sbuft */
 
-struct OFT_Entry{
+typedef struct {
     char* filename[MAXLINE];
     FILE* fd;
     sem_t mutex[2]; // mutex[0] is for reading, mutex[1] is for writing
     int ref_num; // number of reference
-}
+} OFT_Entry;
 
 void sbuf_init(sbuf_t *sp, int n);
 void sbuf_deinit(sbuf_t *sp);
@@ -143,19 +146,21 @@ int open_listenfd(char *port)
 }
 
 sbuf_t sbuf; /* Shared buffer of connected descriptors */
+OFT_Entry OFT[NTHREADS];
 
 void echo_cnt(int connfd);
 void *thread(void *vargp);
 
-FILE* openFile(char* filename, int mode){
-    
+// return an index in OFT 
+int openRead(int connfd, char* filename){
+    int i;
+    int index;
+    for(i = 0; i < NTHREADS; i++){
+        
+    }
 }
 
-void openRead(int connfd, char* filename){
-    
-}
-
-void openAppend(int connfd, char* filename){
+int openAppend(int connfd, char* filename){
 
 }
 
