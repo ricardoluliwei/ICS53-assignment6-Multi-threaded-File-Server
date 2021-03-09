@@ -81,7 +81,7 @@ int main(int argc, const char * argv[]) {
         buffer = strtok(buf2, spliter);
         if(strcmp(buffer, "openRead") == 0){
             buffer = strtok(NULL, spliter);
-            if(strcmp(buffer, "AAPL") != 0 && strcmp(buffer, "TWTR")!=0){
+            if(buffer == NULL){
                 printf("Invalid Syntax!\n");
                 continue;
             }
@@ -92,6 +92,10 @@ int main(int argc, const char * argv[]) {
         }
         if(strcmp(buffer, "openAppend") == 0){
             buffer = strtok(NULL, spliter);
+            if(buffer == NULL){
+                printf("Invalid Syntax!\n");
+                continue;
+            }
             write(clientfd, input, strlen(input));
             read(clientfd, input , MAXLINE);
             fputs(input, stdout);
@@ -99,6 +103,10 @@ int main(int argc, const char * argv[]) {
         }
         if(strcmp(buffer, "read") == 0){
             buffer = strtok(NULL, spliter);
+            if(buffer == NULL){
+                printf("Invalid Syntax!\n");
+                continue;
+            }
             write(clientfd, input, strlen(input));
             read(clientfd, input , MAXLINE);
             fputs(input, stdout);
@@ -106,6 +114,10 @@ int main(int argc, const char * argv[]) {
         }
         if(strcmp(buffer, "append") == 0){
             buffer = strtok(NULL, spliter);
+            if(buffer == NULL){
+                printf("Invalid Syntax!\n");
+                continue;
+            }
             write(clientfd, input, strlen(input));
             read(clientfd, input , MAXLINE);
             fputs(input, stdout);

@@ -22,7 +22,8 @@
 #define MAXBUF   8192  /* Max I/O buffer size */
 #define LISTENQ  1024  /* Second argument to listen() */
 
-
+#define APPENDING "a"
+#define READING "r"
 
 typedef struct {
     int *buf;          /* Buffer array */
@@ -34,6 +35,13 @@ typedef struct {
     sem_t items;       /* Counts available items */
 } sbuf_t;
 /* $end sbuft */
+
+typedef struct {
+    char filename[MAXLINE];
+    FILE* fd;
+    sem_t mutex[2]; // mutex[0] is for reading, mutex[1] is for writing
+    int ref_num; // number of reference
+} OFT_Entry;
 
 void sbuf_init(sbuf_t *sp, int n);
 void sbuf_deinit(sbuf_t *sp);
@@ -85,13 +93,6 @@ int sbuf_remove(sbuf_t *sp)
     sem_post(&sp->slots);                          /* Announce available slot */
     return item;
 }
-
-struct OFT_Entry{
-    char filename[MAXLINE];
-    FILE* fd;
-    sem_t mutex[2]; // mutex[0] is for reading, mutex[1] is for writing
-    int ref_num; // number of reference
-};
 
 int open_listenfd(char *port)
 {
@@ -145,11 +146,57 @@ int open_listenfd(char *port)
 }
 
 sbuf_t sbuf; /* Shared buffer of connected descriptors */
+OFT_Entry file_table[4];
+sem_t OFT_mutex;
 
 void process(int connfd);
 void *thread(void *vargp);
 
-struct OFT_Entry file_table[4];
+void OFT_init(){
+    int i;
+    sem_init(&OFT_mutex, 0, 1);
+    for(i = 0; i < NTHREADS; i++){
+        file_table[i].ref_num = 0;
+        sem_init(&file_table[i].mutex[0], 0, 1);
+        sem_init(&file_table[i].mutex[1], 0, 1);
+    }
+}
+// return an index in OFT 
+int openRead(char* filename){
+    int i;
+    int index;
+    sem_wait(&OFT_mutex);
+    for(i = 0; i < NTHREADS; i++){
+        if(file_table[i].ref_num == 0)
+            index = i;
+        if(strcmp(file_table[i].filename, filename) == 0){
+            index = i;
+            break;
+        } 
+    }
+
+    if (file_table[index].ref_num == 0){
+        // need to open file
+    }
+    
+}
+
+int openAppend(char* filename){
+
+}
+
+void read_file(char* buf, int size, int OFT_index){
+
+}
+
+void append_file(char* buf, int OFT_index){
+
+}
+
+void close_file(int OFT_index){
+
+}
+
 
 
 int main(int argc, const char * argv[]) {
