@@ -86,11 +86,11 @@ int sbuf_remove(sbuf_t *sp)
     return item;
 }
 
-struct fbuf{
+struct OFT_Entry{
     char filename[MAXLINE];
-    FILE* filefd;
-    int status;
-    sbuf_t accessmgr;
+    FILE* fd;
+    sem_t mutex[2]; // mutex[0] is for reading, mutex[1] is for writing
+    int ref_num; // number of reference
 };
 
 int open_listenfd(char *port)
@@ -149,13 +149,14 @@ sbuf_t sbuf; /* Shared buffer of connected descriptors */
 void process(int connfd);
 void *thread(void *vargp);
 
-struct fbuf file_table[4];
+struct OFT_Entry file_table[4];
+
 
 int main(int argc, const char * argv[]) {
     // insert code here...
     printf("Hello, World!\n");
     
-    int i, listenfd, *connfdp;
+    int i, listenfd, connfd;
     socklen_t clientlen;
     struct sockaddr_storage clientaddr;
     pthread_t tid;
@@ -170,7 +171,7 @@ int main(int argc, const char * argv[]) {
 
    while (1) {
         clientlen = sizeof(struct sockaddr_storage);
-	    connfd = accept(listenfd, (SA *) &clientaddr, &clientlen);
+	    connfd = accept(listenfd, (struct sockaddr*) &clientaddr, &clientlen);
 	    sbuf_insert(&sbuf, connfd); /* Insert connfd in buffer */
     }
 }
@@ -205,27 +206,30 @@ void process(int connfd){
         buffer = strtok(input, spliter);
         if(strcmp(buffer, "openRead")==0){
             filename = strtok(NULL, spliter);
-            file_table[0].filefd = fopen(filename, "r");
+            file_table[0].fd = fopen(filename, "r");
             continue;
         }
         if(strcmp(buffer, "openAppend")==0){
             filename = strtok(NULL, spliter);
-            file_table[0].filefd = fopen(filename, "a+");
+            file_table[0].fd = fopen(filename, "a+");
             continue;
         }
         if(strcmp(buffer, "read")==0){
             buffer = strtok(NULL, spliter);
             int readlen = atoi(buffer);
-            fgets(buf2, readlen, file_table[0].filefd);
+            fgets(buf2, readlen, file_table[0].fd);
             sprintf(output, "%s\n", buf2);
         }
         if(strcmp(buffer, "append")==0){
             buffer = strtok(NULL, spliter);
-            fputs(buffer, file_table[0].filefd);
+            fputs(buffer, file_table[0].fd);
             continue;
         }
         if(strcmp(buffer, "close")==0){
-            fclose(file_table[0].filefd);
+            for(i=0; i< NTHREADS;i++){
+                
+                
+            }
             continue;
         }
 
