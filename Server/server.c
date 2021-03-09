@@ -37,7 +37,7 @@ typedef struct {
 /* $end sbuft */
 
 typedef struct {
-    char* filename[MAXLINE];
+    char filename[MAXLINE];
     FILE* fd;
     sem_t mutex[2]; // mutex[0] is for reading, mutex[1] is for writing
     int ref_num; // number of reference
@@ -147,17 +147,33 @@ int open_listenfd(char *port)
 
 sbuf_t sbuf; /* Shared buffer of connected descriptors */
 OFT_Entry OFT[NTHREADS];
+// sem_t OFT_mutex;
 
 void echo_cnt(int connfd);
 void *thread(void *vargp);
 
+void OFT_init(){
+    int i;
+    sem_init(&OFT_mutex, 0, 1);
+    for(i = 0; i < NTHREADS; i++){
+        OFT[i].ref_num = 0;
+        sem_init(&OFT[i].mutex[0], 0, 1);
+        sem_init(&OFT[i].mutex[1], 0, 1);
+    }
+}
 // return an index in OFT 
 int openRead(char* filename){
     int i;
     int index;
     for(i = 0; i < NTHREADS; i++){
-        
+        if(OFT[i].ref_num == 0)
+            index = i;
+        if(strcmp(OFT[i].filename, filename) == 0){
+            index = i;
+            break;
+        } 
     }
+    
 }
 
 int openAppend(char* filename){
