@@ -186,15 +186,31 @@ int openAppend(char* filename){
 }
 
 void read_file(char* buf, int size, int OFT_index){
-
+    fgets(buf, size, file_table[OFT_index].fd);
+    return;
 }
 
 void append_file(char* buf, int OFT_index){
-
+    fputs(buf, file_table[OFT_index].fd);
+    return;
 }
 
 void close_file(int OFT_index){
-
+    sem_wait(&OFT_mutex);
+    if(file_table[OFT_index].ref_num >1){
+        file_table[OFT_index].ref_num --;
+        sem_post(&OFT_mutex);
+        return;
+    }
+    if(file_table[OFT_index].ref_num =1){
+        file_table[OFT_index].ref_num --;
+        fclose(file_table[OFT_index].fd);
+        sem_destroy(&file_table[OFT_index].mutex[0]);
+        sem_destroy(&file_table[OFT_index].mutex[1]);
+        file_table[OFT_index].ref_num = -1;
+        sem_post(&OFT_mutex);
+        return;
+    }
 }
 
 
