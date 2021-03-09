@@ -33,6 +33,13 @@ typedef struct {
 } sbuf_t;
 /* $end sbuft */
 
+struct OFT_Entry{
+    char* filename[MAXLINE];
+    FILE* fd;
+    sem_t mutex[2]; // mutex[0] is for reading, mutex[1] is for writing
+    int ref_num; // number of reference
+}
+
 void sbuf_init(sbuf_t *sp, int n);
 void sbuf_deinit(sbuf_t *sp);
 void sbuf_insert(sbuf_t *sp, int item);
@@ -139,6 +146,22 @@ sbuf_t sbuf; /* Shared buffer of connected descriptors */
 
 void echo_cnt(int connfd);
 void *thread(void *vargp);
+
+FILE* openFile(char* filename, int mode){
+    
+}
+
+void openRead(int connfd, char* filename){
+    
+}
+
+void openAppend(int connfd, char* filename){
+
+}
+
+void close(int connfd, char* filename){
+
+}
 
 int main(int argc, const char * argv[]) {
     // insert code here...
