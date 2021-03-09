@@ -152,7 +152,7 @@ void echo_cnt(int connfd);
 void *thread(void *vargp);
 
 // return an index in OFT 
-int openRead(int connfd, char* filename){
+int openRead(char* filename){
     int i;
     int index;
     for(i = 0; i < NTHREADS; i++){
@@ -160,11 +160,11 @@ int openRead(int connfd, char* filename){
     }
 }
 
-int openAppend(int connfd, char* filename){
+int openAppend(char* filename){
 
 }
 
-void close(int connfd, char* filename){
+void close_file(char* filename){
 
 }
 
