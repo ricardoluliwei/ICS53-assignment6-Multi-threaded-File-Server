@@ -72,6 +72,10 @@ int main(int argc, const char * argv[]) {
     clientfd = open_clientfd(host, port);
     char* spliter = " \n";
     while (1){ // while loop to get user input
+        for(i =0 ; i< MAXLINE;i++){
+            input[i] = '\0';
+            buf2[i] = '\0';
+        }
         printf("> ");
         memset(input, 0, 80);
         fgets(input, (sizeof input / sizeof input[0]), stdin);

@@ -22,7 +22,7 @@
 #define MAXBUF   8192  /* Max I/O buffer size */
 #define LISTENQ  1024  /* Second argument to listen() */
 
-#define APPENDING "a"
+#define APPENDING "a+"
 #define READING "r"
 
 typedef struct {
@@ -246,37 +246,85 @@ void process(int connfd){
     char* spliter = " \n";
     char output[MAXLINE];
     char buf2[MAXLINE];
+    int opened = 0;
+    int index;
 
     while((n = read(connfd, input, MAXLINE)) != 0){
         printf("%s\n", &input[1]);
         
         buffer = strtok(input, spliter);
         if(strcmp(buffer, "openRead")==0){
+            if(opened){
+                strcpy(buf2, "“A file is already open");
+                sprintf(output, "%s\n", buf2);
+                write(connfd, output, strlen(output));
+                for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    buf2[i] = '\0';
+                }
+                continue;
+            }
             filename = strtok(NULL, spliter);
-            file_table[0].fd = fopen(filename, "r");
+            index = openRead(filename);
+            if(index ==-1){
+                strcpy(buf2, "");
+                sprintf(output, "%s\n", buf2);
+                write(connfd, output, strlen(output));
+                for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    buf2[i] = '\0';
+                }
+                continue;
+            }
+            //file_table[0].fd = fopen(filename, "r");
+            opened = 1;
             continue;
         }
         if(strcmp(buffer, "openAppend")==0){
+            if(opened){
+                strcpy(buf2, "“A file is already open");
+                sprintf(output, "%s\n", buf2);
+                 write(connfd, output, strlen(output));
+                for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    buf2[i] = '\0';
+                }
+                continue;
+            }
             filename = strtok(NULL, spliter);
-            file_table[0].fd = fopen(filename, "a+");
+            index = openRead(filename);
+            if(index == -1){
+                strcpy(buf2, "The file is open by another client.");
+                sprintf(output, "%s\n", buf2);
+                 write(connfd, output, strlen(output));
+                for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    buf2[i] = '\0';
+                }
+                continue;
+            }
+            opened = 1;
+            //file_table[0].fd = fopen(filename, "a+");
             continue;
         }
         if(strcmp(buffer, "read")==0){
             buffer = strtok(NULL, spliter);
             int readlen = atoi(buffer);
-            fgets(buf2, readlen, file_table[0].fd);
+            read_file(buf2, readlen, index);
+            //fgets(buf2, readlen, file_table[0].fd);
             sprintf(output, "%s\n", buf2);
         }
         if(strcmp(buffer, "append")==0){
             buffer = strtok(NULL, spliter);
-            fputs(buffer, file_table[0].fd);
-            continue;
+            append_file(buffer, index);
+            //fputs(buffer, file_table[0].fd);
         }
         if(strcmp(buffer, "close")==0){
-            for(i=0; i< NTHREADS;i++){
-                
-                
-            }
+            close_file(index);
             continue;
         }
 
@@ -284,6 +332,7 @@ void process(int connfd){
         for(i =0 ; i< MAXLINE;i++){
             input[i] = '\0';
             output[i] = '\0';
+            buf2[i] = '\0';
         }
     }
     
