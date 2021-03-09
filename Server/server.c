@@ -169,10 +169,9 @@ int main(int argc, const char * argv[]) {
 	pthread_create(&tid, NULL, thread, NULL);               //line:conc:pre:endcreate
 
    while (1) {
-        clientlen=sizeof(struct sockaddr_storage);
-	connfdp = malloc(sizeof(int)); //line:conc:echoservert:beginmalloc
-	*connfdp = accept(listenfd, (struct sockaddr*) &clientaddr, &clientlen); //line:conc:echoservert:endmalloc
-	pthread_create(&tid, NULL, thread, connfdp);
+        clientlen = sizeof(struct sockaddr_storage);
+	    connfd = accept(listenfd, (SA *) &clientaddr, &clientlen);
+	    sbuf_insert(&sbuf, connfd); /* Insert connfd in buffer */
     }
 }
 
@@ -180,10 +179,10 @@ void *thread(void *vargp)
 {  
     pthread_detach(pthread_self()); 
     while (1) { 
-	int connfd = sbuf_remove(&sbuf); /* Remove connfd from buffer */ //line:conc:pre:removeconnfd
-	process(connfd);                /* Service client */
-    printf("Connected\n");
-	close(connfd);
+        int connfd = sbuf_remove(&sbuf); /* Remove connfd from buffer */ //line:conc:pre:removeconnfd
+        process(connfd);                /* Service client */
+        printf("Connected\n");
+        close(connfd);
     }
 };
 
