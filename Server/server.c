@@ -94,6 +94,13 @@ int sbuf_remove(sbuf_t *sp)
     return item;
 }
 
+struct OFT_Entry{
+    char filename[MAXLINE];
+    FILE* fd;
+    sem_t mutex[2]; // mutex[0] is for reading, mutex[1] is for writing
+    int ref_num; // number of reference
+};
+
 int open_listenfd(char *port)
 {
     struct addrinfo hints, *listp, *p;
@@ -146,19 +153,19 @@ int open_listenfd(char *port)
 }
 
 sbuf_t sbuf; /* Shared buffer of connected descriptors */
-OFT_Entry OFT[NTHREADS];
+struct OFT_Entry file_table[4];
 // sem_t OFT_mutex;
 
-void echo_cnt(int connfd);
+void process(int connfd);
 void *thread(void *vargp);
 
 void OFT_init(){
     int i;
     sem_init(&OFT_mutex, 0, 1);
     for(i = 0; i < NTHREADS; i++){
-        OFT[i].ref_num = 0;
-        sem_init(&OFT[i].mutex[0], 0, 1);
-        sem_init(&OFT[i].mutex[1], 0, 1);
+        file_table[i].ref_num = 0;
+        sem_init(&file_table[i].mutex[0], 0, 1);
+        sem_init(&file_table[i].mutex[1], 0, 1);
     }
 }
 // return an index in OFT 
@@ -166,9 +173,9 @@ int openRead(char* filename){
     int i;
     int index;
     for(i = 0; i < NTHREADS; i++){
-        if(OFT[i].ref_num == 0)
+        if(file_table[i].ref_num == 0)
             index = i;
-        if(strcmp(OFT[i].filename, filename) == 0){
+        if(strcmp(file_table[i].filename, filename) == 0){
             index = i;
             break;
         } 
@@ -184,11 +191,13 @@ void close_file(char* filename){
 
 }
 
+
+
 int main(int argc, const char * argv[]) {
     // insert code here...
     printf("Hello, World!\n");
     
-    int i, listenfd, *connfdp;
+    int i, listenfd, connfd;
     socklen_t clientlen;
     struct sockaddr_storage clientaddr;
     pthread_t tid;
@@ -202,10 +211,9 @@ int main(int argc, const char * argv[]) {
 	pthread_create(&tid, NULL, thread, NULL);               //line:conc:pre:endcreate
 
    while (1) {
-        clientlen=sizeof(struct sockaddr_storage);
-	connfdp = malloc(sizeof(int)); //line:conc:echoservert:beginmalloc
-	*connfdp = accept(listenfd, (struct sockaddr*) &clientaddr, &clientlen); //line:conc:echoservert:endmalloc
-	pthread_create(&tid, NULL, thread, connfdp);
+        clientlen = sizeof(struct sockaddr_storage);
+	    connfd = accept(listenfd, (struct sockaddr*) &clientaddr, &clientlen);
+	    sbuf_insert(&sbuf, connfd); /* Insert connfd in buffer */
     }
 }
 
@@ -213,9 +221,64 @@ void *thread(void *vargp)
 {  
     pthread_detach(pthread_self()); 
     while (1) { 
-	int connfd = sbuf_remove(&sbuf); /* Remove connfd from buffer */ //line:conc:pre:removeconnfd
-	//echo_cnt(connfd);                /* Service client */
-    printf("Connected\n");
-	close(connfd);
+        int connfd = sbuf_remove(&sbuf); /* Remove connfd from buffer */ //line:conc:pre:removeconnfd
+        process(connfd);                /* Service client */
+        printf("Connected\n");
+        close(connfd);
     }
+};
+
+void process(int connfd){
+    size_t n;
+    int i = 0;
+    int size;
+    char input[MAXLINE];
+    float result;
+    char* filename; 
+    char* date;
+    char* buffer;
+    char* spliter = " \n";
+    char output[MAXLINE];
+    char buf2[MAXLINE];
+
+    while((n = read(connfd, input, MAXLINE)) != 0){
+        printf("%s\n", &input[1]);
+        
+        buffer = strtok(input, spliter);
+        if(strcmp(buffer, "openRead")==0){
+            filename = strtok(NULL, spliter);
+            file_table[0].fd = fopen(filename, "r");
+            continue;
+        }
+        if(strcmp(buffer, "openAppend")==0){
+            filename = strtok(NULL, spliter);
+            file_table[0].fd = fopen(filename, "a+");
+            continue;
+        }
+        if(strcmp(buffer, "read")==0){
+            buffer = strtok(NULL, spliter);
+            int readlen = atoi(buffer);
+            fgets(buf2, readlen, file_table[0].fd);
+            sprintf(output, "%s\n", buf2);
+        }
+        if(strcmp(buffer, "append")==0){
+            buffer = strtok(NULL, spliter);
+            fputs(buffer, file_table[0].fd);
+            continue;
+        }
+        if(strcmp(buffer, "close")==0){
+            for(i=0; i< NTHREADS;i++){
+                
+                
+            }
+            continue;
+        }
+
+        write(connfd, output, strlen(output));
+        for(i =0 ; i< MAXLINE;i++){
+            input[i] = '\0';
+            output[i] = '\0';
+        }
+    }
+    
 };
