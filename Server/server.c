@@ -165,6 +165,7 @@ void OFT_init(){
 int openRead(char* filename){
     int i;
     int index;
+    sem_wait(&OFT_mutex);
     for(i = 0; i < NTHREADS; i++){
         if(file_table[i].ref_num == 0)
             index = i;
@@ -173,6 +174,10 @@ int openRead(char* filename){
             break;
         } 
     }
+
+    if (file_table[index].ref_num == 0){
+        // need to open file
+    }
     
 }
 
@@ -180,7 +185,15 @@ int openAppend(char* filename){
 
 }
 
-void close_file(char* filename){
+void read_file(char* buf, int size, int OFT_index){
+
+}
+
+void append_file(char* buf, int size, int OFT_index){
+    
+}
+
+void close_file(int OFT_index){
 
 }
 
