@@ -171,8 +171,10 @@ int openRead(char* filename){
         if(file_table[i].read_ref == 0 && file_table[i].mutex[1] == 1)
             index = i;
         if(strcmp(file_table[i].filename, filename) == 0){
-            if (file_table[i].mutex[1] == 0) // the file is opened for appending
+            if (file_table[i].mutex[1] == 0){  // the file is opened for appending
+                sem_post(&OFT_mutex);
                 return -1;
+            }
             index = i;
             break;
         } 
@@ -182,7 +184,7 @@ int openRead(char* filename){
         // need to open file
         file_table[index].fd = fopen(filename, READING);
         strcpy(file_table[index].filename, filename);
-
+        
         // get the write lock
         sem_wait(&file_table[index].mutex[1]);
     }
@@ -194,6 +196,8 @@ int openRead(char* filename){
 // return an index in OFT, -1 for error 
 int openAppend(char* filename){
     int i;
+    int index;
+
 }
 
 void read_file(char* buf, int size, int OFT_index){
@@ -213,12 +217,11 @@ void close_file(int OFT_index){
         sem_post(&OFT_mutex);
         return;
     }
-    if(file_table[OFT_index].read_ref =1){
-        file_table[OFT_index].read_ref --;
+    if(file_table[OFT_index].read_ref <= 1){
+        file_table[OFT_index].read_ref = 0;
         fclose(file_table[OFT_index].fd);
-        sem_destroy(&file_table[OFT_index].mutex[0]);
-        sem_destroy(&file_table[OFT_index].mutex[1]);
-        file_table[OFT_index].read_ref = -1;
+        memset(file_table[OFT_index].filename, 0, MAXLINE);
+        sem_post(&file_table[OFT_index].mutex[1]);
         sem_post(&OFT_mutex);
         return;
     }
@@ -273,9 +276,10 @@ void process(int connfd){
     char* spliter = " \n";
     char output[MAXLINE];
     char buf2[MAXLINE];
-    int opened = 0;
+    int opened;
     int index;
 
+    opened = 0;
     while((n = read(connfd, input, MAXLINE)) != 0){
         printf("%s\n", &input[1]);
         
@@ -352,6 +356,7 @@ void process(int connfd){
         }
         if(strcmp(buffer, "close")==0){
             close_file(index);
+            opened = 0;
             continue;
         }
 
