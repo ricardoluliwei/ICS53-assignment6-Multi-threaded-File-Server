@@ -40,7 +40,7 @@ typedef struct {
     char filename[MAXLINE];
     FILE* fd;
     sem_t mutex[2]; // mutex[0] is for reading, mutex[1] is for writing
-    int ref_num; // number of reference
+    int read_ref; // number of reference
 } OFT_Entry;
 
 void sbuf_init(sbuf_t *sp, int n);
@@ -156,33 +156,64 @@ void OFT_init(){
     int i;
     sem_init(&OFT_mutex, 0, 1);
     for(i = 0; i < NTHREADS; i++){
-        file_table[i].ref_num = 0;
+        file_table[i].read_ref = 0;
         sem_init(&file_table[i].mutex[0], 0, 1);
         sem_init(&file_table[i].mutex[1], 0, 1);
     }
 }
-// return an index in OFT 
+
+// return an index in OFT, -1 for error 
 int openRead(char* filename){
     int i;
     int index;
     sem_wait(&OFT_mutex);
     for(i = 0; i < NTHREADS; i++){
-        if(file_table[i].ref_num == 0)
+        if(file_table[i].read_ref == 0 && file_table[i].mutex[1] == 1)
             index = i;
         if(strcmp(file_table[i].filename, filename) == 0){
+            if (file_table[i].mutex[1] == 0){  // the file is opened for appending
+                sem_post(&OFT_mutex);
+                return -1;
+            }
             index = i;
             break;
         } 
     }
 
-    if (file_table[index].ref_num == 0){
+    if (file_table[index].read_ref == 0){
         // need to open file
+        file_table[index].fd = fopen(filename, READING);
+        strcpy(file_table[index].filename, filename);
+        
+        // get the write lock
+        sem_wait(&file_table[index].mutex[1]);
     }
-    
+    sem_post(&OFT_mutex);
+
+    return index;
 }
 
+// return an index in OFT, -1 for error 
 int openAppend(char* filename){
+    int i;
+    int index;
+    sem_wait(&OFT_mutex);
+    for(i = 0; i < NTHREADS; i++){
+        if(file_table[i].read_ref == 0 && file_table[i].mutex[1] == 1)
+            index = i;
+        if(strcmp(file_table[i].filename, filename) == 0){
+            sem_post(&OFT_mutex);
+            return -1;
+        } 
+    }
+     // get the write lock
+    sem_wait(&file_table[index].mutex[1]);
+    file_table[index].fd = fopen(filename, READING);
+    strcpy(file_table[index].filename, filename);
+       
+    sem_post(&OFT_mutex);
 
+    return index;
 }
 
 void read_file(char* buf, int size, int OFT_index){
@@ -197,17 +228,16 @@ void append_file(char* buf, int OFT_index){
 
 void close_file(int OFT_index){
     sem_wait(&OFT_mutex);
-    if(file_table[OFT_index].ref_num >1){
-        file_table[OFT_index].ref_num --;
+    if(file_table[OFT_index].read_ref >1){
+        file_table[OFT_index].read_ref --;
         sem_post(&OFT_mutex);
         return;
     }
-    if(file_table[OFT_index].ref_num =1){
-        file_table[OFT_index].ref_num --;
+    if(file_table[OFT_index].read_ref <= 1){
+        file_table[OFT_index].read_ref = 0;
         fclose(file_table[OFT_index].fd);
-        sem_destroy(&file_table[OFT_index].mutex[0]);
-        sem_destroy(&file_table[OFT_index].mutex[1]);
-        file_table[OFT_index].ref_num = -1;
+        memset(file_table[OFT_index].filename, 0, MAXLINE);
+        sem_post(&file_table[OFT_index].mutex[1]);
         sem_post(&OFT_mutex);
         return;
     }
@@ -262,9 +292,10 @@ void process(int connfd){
     char* spliter = " \n";
     char output[MAXLINE];
     char buf2[MAXLINE];
-    int opened = 0;
+    int opened;
     int index;
 
+    opened = 0;
     while((n = read(connfd, input, MAXLINE)) != 0){
         printf("%s\n", &input[1]);
         
@@ -341,6 +372,7 @@ void process(int connfd){
         }
         if(strcmp(buffer, "close")==0){
             close_file(index);
+            opened = 0;
             continue;
         }
 
