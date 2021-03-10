@@ -189,7 +189,7 @@ void read_file(char* buf, int size, int OFT_index){
 
 }
 
-void append_file(char* buf, int OFT_index){
+void append_file(char* str, int OFT_index){
 
 }
 
