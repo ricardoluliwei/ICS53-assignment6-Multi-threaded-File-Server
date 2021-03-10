@@ -22,7 +22,7 @@
 #define MAXBUF   8192  /* Max I/O buffer size */
 #define LISTENQ  1024  /* Second argument to listen() */
 
-#define APPENDING "a"
+#define APPENDING "a+"
 #define READING "r"
 
 typedef struct {
@@ -40,7 +40,7 @@ typedef struct {
     char filename[MAXLINE];
     FILE* fd;
     sem_t mutex[2]; // mutex[0] is for reading, mutex[1] is for writing
-    int ref_num; // number of reference
+    int read_ref; // number of reference
 } OFT_Entry;
 
 void sbuf_init(sbuf_t *sp, int n);
@@ -156,45 +156,72 @@ void OFT_init(){
     int i;
     sem_init(&OFT_mutex, 0, 1);
     for(i = 0; i < NTHREADS; i++){
-        file_table[i].ref_num = 0;
+        file_table[i].read_ref = 0;
         sem_init(&file_table[i].mutex[0], 0, 1);
         sem_init(&file_table[i].mutex[1], 0, 1);
     }
 }
-// return an index in OFT 
+
+// return an index in OFT, -1 for error 
 int openRead(char* filename){
     int i;
     int index;
     sem_wait(&OFT_mutex);
     for(i = 0; i < NTHREADS; i++){
-        if(file_table[i].ref_num == 0)
+        if(file_table[i].read_ref == 0 && file_table[i].mutex[1] == 1)
             index = i;
         if(strcmp(file_table[i].filename, filename) == 0){
+            if (file_table[i].mutex[1] == 0) // the file is opened for appending
+                return -1;
             index = i;
             break;
         } 
     }
 
-    if (file_table[index].ref_num == 0){
+    if (file_table[index].read_ref == 0){
         // need to open file
+        file_table[index].fd = fopen(filename, READING);
+        strcpy(file_table[index].filename, filename);
+
+        // get the write lock
+        sem_wait(&file_table[index].mutex[1]);
     }
-    
+    sem_post(&OFT_mutex);
+
+    return index;
 }
 
+// return an index in OFT, -1 for error 
 int openAppend(char* filename){
-
+    int i;
 }
 
 void read_file(char* buf, int size, int OFT_index){
-
+    fgets(buf, size, file_table[OFT_index].fd);
+    return;
 }
 
-void append_file(char* str, int OFT_index){
-
+void append_file(char* buf, int OFT_index){
+    fputs(buf, file_table[OFT_index].fd);
+    return;
 }
 
 void close_file(int OFT_index){
-
+    sem_wait(&OFT_mutex);
+    if(file_table[OFT_index].read_ref >1){
+        file_table[OFT_index].read_ref --;
+        sem_post(&OFT_mutex);
+        return;
+    }
+    if(file_table[OFT_index].read_ref =1){
+        file_table[OFT_index].read_ref --;
+        fclose(file_table[OFT_index].fd);
+        sem_destroy(&file_table[OFT_index].mutex[0]);
+        sem_destroy(&file_table[OFT_index].mutex[1]);
+        file_table[OFT_index].read_ref = -1;
+        sem_post(&OFT_mutex);
+        return;
+    }
 }
 
 
@@ -246,37 +273,85 @@ void process(int connfd){
     char* spliter = " \n";
     char output[MAXLINE];
     char buf2[MAXLINE];
+    int opened = 0;
+    int index;
 
     while((n = read(connfd, input, MAXLINE)) != 0){
         printf("%s\n", &input[1]);
         
         buffer = strtok(input, spliter);
         if(strcmp(buffer, "openRead")==0){
+            if(opened){
+                strcpy(buf2, "“A file is already open");
+                sprintf(output, "%s\n", buf2);
+                write(connfd, output, strlen(output));
+                for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    buf2[i] = '\0';
+                }
+                continue;
+            }
             filename = strtok(NULL, spliter);
-            file_table[0].fd = fopen(filename, "r");
+            index = openRead(filename);
+            if(index ==-1){
+                strcpy(buf2, "");
+                sprintf(output, "%s\n", buf2);
+                write(connfd, output, strlen(output));
+                for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    buf2[i] = '\0';
+                }
+                continue;
+            }
+            //file_table[0].fd = fopen(filename, "r");
+            opened = 1;
             continue;
         }
         if(strcmp(buffer, "openAppend")==0){
+            if(opened){
+                strcpy(buf2, "“A file is already open");
+                sprintf(output, "%s\n", buf2);
+                 write(connfd, output, strlen(output));
+                for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    buf2[i] = '\0';
+                }
+                continue;
+            }
             filename = strtok(NULL, spliter);
-            file_table[0].fd = fopen(filename, "a+");
+            index = openRead(filename);
+            if(index == -1){
+                strcpy(buf2, "The file is open by another client.");
+                sprintf(output, "%s\n", buf2);
+                 write(connfd, output, strlen(output));
+                for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    buf2[i] = '\0';
+                }
+                continue;
+            }
+            opened = 1;
+            //file_table[0].fd = fopen(filename, "a+");
             continue;
         }
         if(strcmp(buffer, "read")==0){
             buffer = strtok(NULL, spliter);
             int readlen = atoi(buffer);
-            fgets(buf2, readlen, file_table[0].fd);
+            read_file(buf2, readlen, index);
+            //fgets(buf2, readlen, file_table[0].fd);
             sprintf(output, "%s\n", buf2);
         }
         if(strcmp(buffer, "append")==0){
             buffer = strtok(NULL, spliter);
-            fputs(buffer, file_table[0].fd);
-            continue;
+            append_file(buffer, index);
+            //fputs(buffer, file_table[0].fd);
         }
         if(strcmp(buffer, "close")==0){
-            for(i=0; i< NTHREADS;i++){
-                
-                
-            }
+            close_file(index);
             continue;
         }
 
@@ -284,6 +359,7 @@ void process(int connfd){
         for(i =0 ; i< MAXLINE;i++){
             input[i] = '\0';
             output[i] = '\0';
+            buf2[i] = '\0';
         }
     }
     
