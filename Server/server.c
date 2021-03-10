@@ -167,11 +167,13 @@ int openRead(char* filename){
     int i;
     int index;
     sem_wait(&OFT_mutex);
+    int svalue;
     for(i = 0; i < NTHREADS; i++){
-        if(file_table[i].read_ref == 0 && file_table[i].mutex[1] == 1)
+        sem_getvalue(&file_table[i].mutex[1], &svalue);
+        if(file_table[i].read_ref == 0 && svalue == 1)
             index = i;
         if(strcmp(file_table[i].filename, filename) == 0){
-            if (file_table[i].mutex[1] == 0){  // the file is opened for appending
+            if (svalue == 0){  // the file is opened for appending
                 sem_post(&OFT_mutex);
                 return -1;
             }
@@ -197,9 +199,11 @@ int openRead(char* filename){
 int openAppend(char* filename){
     int i;
     int index;
+    int svalue;
     sem_wait(&OFT_mutex);
     for(i = 0; i < NTHREADS; i++){
-        if(file_table[i].read_ref == 0 && file_table[i].mutex[1] == 1)
+        sem_getvalue(&file_table[i].mutex[1], &svalue);
+        if(file_table[i].read_ref == 0 && svalue == 1)
             index = i;
         if(strcmp(file_table[i].filename, filename) == 0){
             sem_post(&OFT_mutex);
@@ -236,7 +240,7 @@ void close_file(int OFT_index){
     if(file_table[OFT_index].read_ref <= 1){
         file_table[OFT_index].read_ref = 0;
         fclose(file_table[OFT_index].fd);
-        memset(file_table[OFT_index].filename, 0, MAXLINE);
+        memset(&file_table[OFT_index].filename, 0, MAXLINE);
         sem_post(&file_table[OFT_index].mutex[1]);
         sem_post(&OFT_mutex);
         return;
@@ -290,7 +294,7 @@ void process(int connfd){
     char* date;
     char* buffer;
     char* spliter = " \n";
-    char output[MAXLINE];
+    char output[MAXLINE+1];
     char buf2[MAXLINE];
     int opened;
     int index;
@@ -300,6 +304,20 @@ void process(int connfd){
         printf("%s\n", &input[1]);
         
         buffer = strtok(input, spliter);
+        
+        if(strcmp(buffer, "test")==0){
+            printf("Received Test from connfd %d\n", connfd);
+            strcpy(buf2, "Test Back");
+            sprintf(output, "%s\n", buf2);
+            write(connfd, output, strlen(output));
+            for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    buf2[i] = '\0';
+                }
+            continue;
+        }
+        
         if(strcmp(buffer, "openRead")==0){
             if(opened){
                 strcpy(buf2, "“A file is already open");
@@ -380,6 +398,7 @@ void process(int connfd){
         for(i =0 ; i< MAXLINE;i++){
             input[i] = '\0';
             output[i] = '\0';
+            output[i+1] = '\0';
             buf2[i] = '\0';
         }
     }

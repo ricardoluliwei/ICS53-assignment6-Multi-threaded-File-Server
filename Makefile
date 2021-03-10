@@ -6,7 +6,7 @@
 
 # Use gcc as a compiler
 CC=gcc
-CFLAGS= -pthread -g -fprofile-arcs -ftest-coverage
+CFLAGS= -pthread -g -fprofile-arcs -ftest-coverage -Wall
 SOURCES := $(wildcard */*.c)
 REMOVE := $(patsubst %.c, %, $(SOURCES))
 EXECUTABLES := $(patsubst %.c, %, $(SOURCES))
