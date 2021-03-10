@@ -197,7 +197,23 @@ int openRead(char* filename){
 int openAppend(char* filename){
     int i;
     int index;
+    sem_wait(&OFT_mutex);
+    for(i = 0; i < NTHREADS; i++){
+        if(file_table[i].read_ref == 0 && file_table[i].mutex[1] == 1)
+            index = i;
+        if(strcmp(file_table[i].filename, filename) == 0){
+            sem_post(&OFT_mutex);
+            return -1;
+        } 
+    }
+     // get the write lock
+    sem_wait(&file_table[index].mutex[1]);
+    file_table[index].fd = fopen(filename, READING);
+    strcpy(file_table[index].filename, filename);
+       
+    sem_post(&OFT_mutex);
 
+    return index;
 }
 
 void read_file(char* buf, int size, int OFT_index){
