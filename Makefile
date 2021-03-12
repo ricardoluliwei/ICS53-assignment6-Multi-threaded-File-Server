@@ -25,18 +25,18 @@ clean:
 	@rm -rf $(REMOVE)
 	@rm -rf $(wildcard *.gcda) $(wildcard *.gcno) $(wildcard core*)
 	@echo Clean All!
-	@echo "123456" > a.txt
-	@echo "abcd" > b.txt
-	@echo "efgh" > c.txt
+	@printf "%s" "123456" > a.txt
+	@printf "%s" "abcd" > b.txt
+	@printf "%s" "efgh" > c.txt
 
 runs:
-	sh Server.sh
+	@sh Server.sh
 
 runc:
-	sh Client.sh
+	@sh Client.sh
 
 gdbs:
-	sh gdbServer.sh
+	@sh gdbServer.sh
 
 gdbc:
-	sh gdbClient.sh
+	@sh gdbClient.sh

@@ -10,3 +10,4 @@ openAppend a.txt
 append abc
 append efg
 close
+quit
