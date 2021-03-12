@@ -215,7 +215,7 @@ int openAppend(char* filename){
     }
      // get the write lock
     sem_wait(&file_table[index].mutex[1]);
-    file_table[index].fd = fopen(filename, READING);
+    file_table[index].fd = fopen(filename, APPENDING);
     strcpy(file_table[index].filename, filename);
        
     sem_post(&OFT_mutex);
@@ -365,6 +365,12 @@ void process(int connfd){
         }
         if(strcmp(buffer, "openAppend")==0){
             if(opened){
+                for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    output[i+1] = '\0';
+                    buf2[i] = '\0';
+                }
                 strcpy(buf2, "A file is already open\n");
                 sprintf(output, "%s", buf2);
                 write(connfd, output, strlen(output)+1);
@@ -394,6 +400,12 @@ void process(int connfd){
             strcpy(output, "file opened\n");
             write(connfd, output, strlen(output)+1);
             //file_table[0].fd = fopen(filename, "a+");
+            for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    output[i+1] = '\0';
+                    buf2[i] = '\0';
+            }
             continue;
         }
 
@@ -422,7 +434,7 @@ void process(int connfd){
                 strcpy(output, "File not open\n");
             } else {
                 append_file(buffer, index);
-                strcpy(output, "");
+                strcpy(output, EMPTY_STR);
             }
             //fputs(buffer, file_table[0].fd);
         }
@@ -430,7 +442,7 @@ void process(int connfd){
         if(strcmp(buffer, "close")==0){
             close_file(index);
             opened = 0;
-            continue;
+            strcpy(output, EMPTY_STR);
         }
 
         write(connfd, output, strlen(output)+1);
