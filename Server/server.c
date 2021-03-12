@@ -189,10 +189,10 @@ int openRead(char* filename){
         // need to open file
         file_table[index].fd = fopen(filename, READING);
         strcpy(file_table[index].filename, filename);
-        file_table[index].read_ref ++;
         // get the write lock
         sem_wait(&file_table[index].mutex[1]);
     }
+    file_table[index].read_ref ++;
     sem_post(&OFT_mutex);
 
     return index;
