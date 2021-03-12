@@ -1,0 +1,12 @@
+openRead t1.txt
+read 3
+read 3
+openRead t1.txt
+openAppend t1.txt
+close
+openAppend t2.txt
+openRead t2.txt
+openAppend t2.txt
+append abc
+append efg
+close

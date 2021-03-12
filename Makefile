@@ -26,11 +26,7 @@ clean:
 	@rm -rf $(wildcard *.gcda) $(wildcard *.gcno) $(wildcard core*)
 	@echo Clean All!
 
-run-server:
-	gdb --args Server/server $(PORT)
-
-run-client:
-	gdb --args Client/client ${HOST} $(PORT)
-
-host:
-	echo ${HOST}
+runS:
+	sh gdbServer.sh
+runC:
+	sh gdbClient.sh

@@ -1,0 +1,1 @@
+gdb --args Client/client $(hostname) 30000

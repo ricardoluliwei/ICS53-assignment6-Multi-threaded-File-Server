@@ -1,0 +1,1 @@
+gdb --args Server/server 30000
