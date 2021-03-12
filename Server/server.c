@@ -325,7 +325,6 @@ void process(int connfd){
         
         if(strcmp(buffer, "openRead")==0){
             if(opened){
-                int write_status;
                 sem_wait(&OFT_mutex);
                 if(file_table[index].read_ref){
                     strcpy(buf2, "A file is already open for reading\n");
