@@ -337,7 +337,7 @@ void process(int connfd){
             }
             //file_table[0].fd = fopen(filename, "r");
             opened = 1;
-            strcpy(buf2, "Opened file\n");
+            strcpy(buf2, "file opened\n");
                 sprintf(output, "%s", buf2);
                 write(connfd, output, strlen(output)+1);
                 for(i =0 ; i< MAXLINE;i++){
