@@ -325,7 +325,14 @@ void process(int connfd){
         
         if(strcmp(buffer, "openRead")==0){
             if(opened){
-                strcpy(buf2, "A file is already open for reading\n");
+                int write_status;
+                sem_wait(&OFT_mutex);
+                if(file_table[index].read_ref){
+                    strcpy(buf2, "A file is already open for reading\n");
+                } else {
+                    strcpy(buf2, "A file is already open for appending\n");
+                }
+                sem_post(&OFT_mutex);
                 sprintf(output, "%s", buf2);
                 printf("%s", buf2);
                 write(connfd, output, strlen(output)+1);
@@ -373,7 +380,13 @@ void process(int connfd){
                     output[i+1] = '\0';
                     buf2[i] = '\0';
                 }
-                strcpy(buf2, "A file is already open for appending\n");
+                sem_wait(&OFT_mutex);
+                if(file_table[index].read_ref){
+                    strcpy(buf2, "A file is already open for reading\n");
+                } else {
+                    strcpy(buf2, "A file is already open for appending\n");
+                }
+                sem_post(&OFT_mutex);
                 sprintf(output, "%s", buf2);
                 printf("%s", buf2);
                 write(connfd, output, strlen(output)+1);

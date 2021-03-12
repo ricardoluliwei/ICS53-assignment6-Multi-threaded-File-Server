@@ -25,6 +25,9 @@ clean:
 	@rm -rf $(REMOVE)
 	@rm -rf $(wildcard *.gcda) $(wildcard *.gcno) $(wildcard core*)
 	@echo Clean All!
+	@echo 123456 > a.txt
+	@echo abcd > b.txt
+	@echo efgh > c.txt
 
 runs:
 	sh gdbServer.sh

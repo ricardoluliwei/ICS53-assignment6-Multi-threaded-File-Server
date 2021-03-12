@@ -1,12 +1,12 @@
-openRead t1.txt
+openRead a.txt
 read 3
-read 3
-openRead t1.txt
-openAppend t1.txt
-close
-openAppend t2.txt
-openRead t2.txt
-openAppend t2.txt
+read 2
+openRead a.txt
+openAppend a.txt
+close a.txt
+openAppend a.txt
+openRead a.txt
+openAppend a.txt
 append abc
 append efg
 close
