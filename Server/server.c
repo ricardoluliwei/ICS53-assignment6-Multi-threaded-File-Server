@@ -390,16 +390,25 @@ void process(int connfd){
                     output[i] = '\0';
                     output[i+1] = '\0';
                     buf2[i] = '\0';
-                }
+            }
+            if(opened == 0){
+                strcpy(output, "File not open\n");
+            } else{
             read_file(buf2, readlen, index, read_position);
             read_position += readlen;
             //fgets(buf2, readlen, file_table[0].fd);
             sprintf(output, "%s\n", buf2);
+            }
         }
 
         if(strcmp(buffer, "append")==0){
             buffer = strtok(NULL, spliter);
-            append_file(buffer, index);
+            if(opened == 0){
+                strcpy(output, "File not open\n");
+            } else {
+                append_file(buffer, index);
+                strcpy(output, "");
+            }
             //fputs(buffer, file_table[0].fd);
         }
 
