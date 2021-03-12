@@ -30,6 +30,13 @@ clean:
 	@echo "efgh" > c.txt
 
 runs:
-	sh gdbServer.sh
+	sh Server.sh
+
 runc:
+	sh Client.sh
+
+gdbs:
+	sh gdbServer.sh
+
+gdbc:
 	sh gdbClient.sh
