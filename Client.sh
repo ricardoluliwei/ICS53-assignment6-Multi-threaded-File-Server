@@ -1,0 +1,1 @@
+./Client/client $(hostname) 30000
