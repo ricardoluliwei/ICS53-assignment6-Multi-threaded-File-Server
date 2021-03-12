@@ -415,6 +415,7 @@ void process(int connfd){
         if(strcmp(buffer, "close")==0){
             close_file(index);
             opened = 0;
+            read_position = 0;
             continue;
         }
 
