@@ -133,15 +133,7 @@ int main(int argc, const char * argv[]) {
             //read(clientfd, input , MAXLINE);
             //fputs(input, stdout);
             continue;
-        }
-        if(strcmp(buffer, "test") == 0){
-             buffer = strtok(NULL, spliter);
-            write(clientfd, input, strlen(input));
-            read(clientfd, input , MAXLINE);
-            fputs(input, stdout);
-            continue;
-        }
-        else{
+        } else{
             printf("Invalid Syntax!\n");
             continue;
         }

@@ -96,7 +96,7 @@ int sbuf_remove(sbuf_t *sp)
     return item;
 }
 
-int open_listenfd(char *port)
+int open_listenfd(const char *port)
 {
     struct addrinfo hints, *listp, *p;
     int listenfd, rc, optval = 1;
@@ -170,7 +170,6 @@ int openRead(char* filename){
     int index;
     int svalue;
     sem_getvalue(&OFT_mutex, &svalue);
-    printf("Sem value of OFT_mutex: %d\n", svalue);
     sem_wait(&OFT_mutex);
     for(i = 0; i < NTHREADS; i++){
         sem_getvalue(&file_table[i].mutex[1], &svalue);
@@ -295,11 +294,8 @@ void *thread(void *vargp)
 void process(int connfd){
     size_t n;
     int i = 0;
-    int size;
     char input[MAXLINE];
-    float result;
     char* filename; 
-    char* date;
     char* buffer;
     char* spliter = " \n";
     char output[MAXLINE+1];
@@ -310,28 +306,12 @@ void process(int connfd){
     opened = 0;
     read_position = 0;
     while((n = read(connfd, input, MAXLINE)) != 0){
-        printf("%s\n", input);
-        
+        printf("%s\n", input);  
         buffer = strtok(input, spliter);
-        
-        if(strcmp(buffer, "test")==0){
-            printf("Received Test from connfd %d\n", connfd);
-            strcpy(buf2, "Test Back\n\0");
-            sprintf(output, "%s\0", buf2);
-            write(connfd, output, strlen(output)+1);
-            for(i =0 ; i< MAXLINE;i++){
-                    input[i] = '\0';
-                    output[i] = '\0';
-                    output[i+1] = '\0';
-                    buf2[i] = '\0';
-                }
-            continue;
-        }
-        
         if(strcmp(buffer, "openRead")==0){
             if(opened){
-                strcpy(buf2, "A file is already open\n\0");
-                sprintf(output, "%s\0", buf2);
+                strcpy(buf2, "A file is already open\n");
+                sprintf(output, "%s", buf2);
                 write(connfd, output, strlen(output)+1);
                 for(i =0 ; i< MAXLINE;i++){
                     input[i] = '\0';
@@ -344,8 +324,8 @@ void process(int connfd){
             filename = strtok(NULL, spliter);
             index = openRead(filename);
             if(index ==-1){
-                strcpy(buf2, "The file is open by another client.\n\0");
-                sprintf(output, "%s\0", buf2);
+                strcpy(buf2, "The file is open by another client.\n");
+                sprintf(output, "%s", buf2);
                 write(connfd, output, strlen(output)+1);
                 for(i =0 ; i< MAXLINE;i++){
                     input[i] = '\0';
@@ -357,8 +337,8 @@ void process(int connfd){
             }
             //file_table[0].fd = fopen(filename, "r");
             opened = 1;
-            strcpy(buf2, "Opened file\n\0");
-                sprintf(output, "%s\0", buf2);
+            strcpy(buf2, "Opened file\n");
+                sprintf(output, "%s", buf2);
                 write(connfd, output, strlen(output)+1);
                 for(i =0 ; i< MAXLINE;i++){
                     input[i] = '\0';
@@ -370,8 +350,8 @@ void process(int connfd){
         }
         if(strcmp(buffer, "openAppend")==0){
             if(opened){
-                strcpy(buf2, "“A file is already open\n\0");
-                sprintf(output, "%s\0", buf2);
+                strcpy(buf2, "A file is already open\n");
+                sprintf(output, "%s", buf2);
                 write(connfd, output, strlen(output)+1);
                 for(i =0 ; i< MAXLINE;i++){
                     input[i] = '\0';
@@ -384,9 +364,9 @@ void process(int connfd){
             filename = strtok(NULL, spliter);
             index = openAppend(filename);
             if(index == -1){
-                strcpy(buf2, "The file is open by another client.\n\0");
-                sprintf(output, "%s\0", buf2);
-                 write(connfd, output, strlen(output)+1);
+                strcpy(buf2, "The file is open by another client.\n");
+                sprintf(output, "%s", buf2);
+                write(connfd, output, strlen(output)+1);
                 for(i =0 ; i< MAXLINE;i++){
                     input[i] = '\0';
                     output[i] = '\0';
@@ -396,6 +376,8 @@ void process(int connfd){
                 continue;
             }
             opened = 1;
+            strcpy(output, "file opened\n");
+            write(connfd, output, strlen(output)+1);
             //file_table[0].fd = fopen(filename, "a+");
             continue;
         }
