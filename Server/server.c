@@ -215,7 +215,7 @@ int openAppend(char* filename){
     }
      // get the write lock
     sem_wait(&file_table[index].mutex[1]);
-    file_table[index].fd = fopen(filename, READING);
+    file_table[index].fd = fopen(filename, APPENDING);
     strcpy(file_table[index].filename, filename);
        
     sem_post(&OFT_mutex);
@@ -237,7 +237,7 @@ void append_file(char* buf, int OFT_index){
 }
 
 void close_file(int OFT_index){
-    printf("Closing File on index %d which has %d client in use.\n", OFT_index, file_table[OFT_index].read_ref);
+    //printf("Closing File on index %d which has %d client in use.\n", OFT_index, file_table[OFT_index].read_ref);
     sem_wait(&OFT_mutex);
     if(file_table[OFT_index].read_ref >1){
         file_table[OFT_index].read_ref --;
@@ -286,7 +286,7 @@ void *thread(void *vargp)
     while (1) { 
         int connfd = sbuf_remove(&sbuf); /* Remove connfd from buffer */ //line:conc:pre:removeconnfd
         process(connfd);                /* Service client */
-        printf("Connected\n");
+        //printf("Connected\n");
         close(connfd);
     }
 };
@@ -308,10 +308,26 @@ void process(int connfd){
     while((n = read(connfd, input, MAXLINE)) != 0){
         printf("%s\n", input);  
         buffer = strtok(input, spliter);
+        
+        if(strcmp(buffer, "test")==0){
+            printf("Received Test from connfd %d\n", connfd);
+            strcpy(buf2, "Test Back\n\0");
+            sprintf(output, "%s", buf2);
+            write(connfd, output, strlen(output)+1);
+            for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    output[i+1] = '\0';
+                    buf2[i] = '\0';
+                }
+            continue;
+        }
+        
         if(strcmp(buffer, "openRead")==0){
             if(opened){
-                strcpy(buf2, "A file is already open\n");
+                strcpy(buf2, "A file is already open for reading\n");
                 sprintf(output, "%s", buf2);
+                printf("%s", buf2);
                 write(connfd, output, strlen(output)+1);
                 for(i =0 ; i< MAXLINE;i++){
                     input[i] = '\0';
@@ -326,6 +342,7 @@ void process(int connfd){
             if(index ==-1){
                 strcpy(buf2, "The file is open by another client.\n");
                 sprintf(output, "%s", buf2);
+                printf("%s", buf2);
                 write(connfd, output, strlen(output)+1);
                 for(i =0 ; i< MAXLINE;i++){
                     input[i] = '\0';
@@ -337,7 +354,7 @@ void process(int connfd){
             }
             //file_table[0].fd = fopen(filename, "r");
             opened = 1;
-            strcpy(buf2, "file opened\n");
+            strcpy(buf2, ""); // file opened
                 sprintf(output, "%s", buf2);
                 write(connfd, output, strlen(output)+1);
                 for(i =0 ; i< MAXLINE;i++){
@@ -350,8 +367,15 @@ void process(int connfd){
         }
         if(strcmp(buffer, "openAppend")==0){
             if(opened){
-                strcpy(buf2, "A file is already open\n");
+                for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    output[i+1] = '\0';
+                    buf2[i] = '\0';
+                }
+                strcpy(buf2, "A file is already open for appending\n");
                 sprintf(output, "%s", buf2);
+                printf("%s", buf2);
                 write(connfd, output, strlen(output)+1);
                 for(i =0 ; i< MAXLINE;i++){
                     input[i] = '\0';
@@ -366,6 +390,7 @@ void process(int connfd){
             if(index == -1){
                 strcpy(buf2, "The file is open by another client.\n");
                 sprintf(output, "%s", buf2);
+                printf("%s", buf2);
                 write(connfd, output, strlen(output)+1);
                 for(i =0 ; i< MAXLINE;i++){
                     input[i] = '\0';
@@ -376,9 +401,15 @@ void process(int connfd){
                 continue;
             }
             opened = 1;
-            strcpy(output, "file opened\n");
+            strcpy(output, ""); //file opened
             write(connfd, output, strlen(output)+1);
             //file_table[0].fd = fopen(filename, "a+");
+            for(i =0 ; i< MAXLINE;i++){
+                    input[i] = '\0';
+                    output[i] = '\0';
+                    output[i+1] = '\0';
+                    buf2[i] = '\0';
+            }
             continue;
         }
 
@@ -393,6 +424,7 @@ void process(int connfd){
             }
             if(opened == 0){
                 strcpy(output, "File not open\n");
+                printf("File not open\n");
             } else{
             read_file(buf2, readlen, index, read_position);
             read_position += readlen;
@@ -405,9 +437,10 @@ void process(int connfd){
             buffer = strtok(NULL, spliter);
             if(opened == 0){
                 strcpy(output, "File not open\n");
+                printf("File not open\n");
             } else {
                 append_file(buffer, index);
-                strcpy(output, "");
+                strcpy(output, EMPTY_STR);
             }
             //fputs(buffer, file_table[0].fd);
         }
@@ -416,7 +449,7 @@ void process(int connfd){
             close_file(index);
             opened = 0;
             read_position = 0;
-            continue;
+            strcpy(output, EMPTY_STR);
         }
 
         write(connfd, output, strlen(output)+1);
