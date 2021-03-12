@@ -25,6 +25,8 @@
 #define APPENDING "a+"
 #define READING "r"
 
+#define EMPTY_STR ""
+
 typedef struct {
     int *buf;          /* Buffer array */
     int n;             /* Maximum number of slots */
@@ -222,8 +224,11 @@ int openAppend(char* filename){
     return index;
 }
 
-void read_file(char* buf, int size, int OFT_index){
+void read_file(char* buf, int size, int OFT_index, int position){
+    sem_wait(&OFT_mutex);
+    fseek(file_table[OFT_index].fd, position, SEEK_SET);
     fgets(buf, size+1, file_table[OFT_index].fd);
+    sem_post(&OFT_mutex);
     return;
 }
 
@@ -254,7 +259,7 @@ void close_file(int OFT_index){
 
 int main(int argc, const char * argv[]) {
     // insert code here...
-    printf("Hello, World!\n");
+    printf("server started\n");
     OFT_init(); 
     int i, listenfd, connfd;
     socklen_t clientlen;
@@ -267,9 +272,9 @@ int main(int argc, const char * argv[]) {
     listenfd = open_listenfd(argv[1]);
     sbuf_init(&sbuf, SBUFSIZE); //line:conc:pre:initsbuf
     for (i = 0; i < NTHREADS; i++)  /* Create worker threads */ //line:conc:pre:begincreate
-	pthread_create(&tid, NULL, thread, NULL);               //line:conc:pre:endcreate
+	    pthread_create(&tid, NULL, thread, NULL);               //line:conc:pre:endcreate
 
-   while (1) {
+    while (1) {
         clientlen = sizeof(struct sockaddr_storage);
 	    connfd = accept(listenfd, (struct sockaddr*) &clientaddr, &clientlen);
 	    sbuf_insert(&sbuf, connfd); /* Insert connfd in buffer */
@@ -301,7 +306,9 @@ void process(int connfd){
     char buf2[MAXLINE];
     int opened;
     int index;
+    int read_position;
     opened = 0;
+    read_position = 0;
     while((n = read(connfd, input, MAXLINE)) != 0){
         printf("%s\n", input);
         
@@ -365,7 +372,7 @@ void process(int connfd){
             if(opened){
                 strcpy(buf2, "“A file is already open\n\0");
                 sprintf(output, "%s\0", buf2);
-                 write(connfd, output, strlen(output)+1);
+                write(connfd, output, strlen(output)+1);
                 for(i =0 ; i< MAXLINE;i++){
                     input[i] = '\0';
                     output[i] = '\0';
@@ -375,7 +382,7 @@ void process(int connfd){
                 continue;
             }
             filename = strtok(NULL, spliter);
-            index = openRead(filename);
+            index = openAppend(filename);
             if(index == -1){
                 strcpy(buf2, "The file is open by another client.\n\0");
                 sprintf(output, "%s\0", buf2);
@@ -392,7 +399,8 @@ void process(int connfd){
             //file_table[0].fd = fopen(filename, "a+");
             continue;
         }
-        if(strcmp(buffer, "read")==0){
+
+        if(strcmp(buffer, "read")==0){  
             buffer = strtok(NULL, spliter);
             int readlen = atoi(buffer);
             for(i =0 ; i< MAXLINE;i++){
@@ -401,15 +409,18 @@ void process(int connfd){
                     output[i+1] = '\0';
                     buf2[i] = '\0';
                 }
-            read_file(buf2, readlen, index);
+            read_file(buf2, readlen, index, read_position);
+            read_position += readlen;
             //fgets(buf2, readlen, file_table[0].fd);
             sprintf(output, "%s\n", buf2);
         }
+
         if(strcmp(buffer, "append")==0){
             buffer = strtok(NULL, spliter);
             append_file(buffer, index);
             //fputs(buffer, file_table[0].fd);
         }
+
         if(strcmp(buffer, "close")==0){
             close_file(index);
             opened = 0;
