@@ -6,11 +6,11 @@
 
 # Use gcc as a compiler
 CC=gcc
-CFLAGS= -pthread -g -fprofile-arcs -ftest-coverage -Wall
+CFLAGS= -pthread -g -fprofile-arcs -ftest-coverage -Wall -Wextra
 SOURCES := $(wildcard */*.c)
 REMOVE := $(patsubst %.c, %, $(SOURCES))
 EXECUTABLES := $(patsubst %.c, %, $(SOURCES))
-
+PORT=30000
 
 .PHONY: all clean test
 .PRECIOUS: build/% 
@@ -26,8 +26,7 @@ clean:
 	@rm -rf $(wildcard *.gcda) $(wildcard *.gcno) $(wildcard core*)
 	@echo Clean All!
 
-test:
-	@zip -q -r hw.zip $(wildcard *.run hw.c)
-	@python3 autocov.py
-	@mv ./hw/hw.c.gcov ./
-	@rm -r hw
+runs:
+	sh gdbServer.sh
+runc:
+	sh gdbClient.sh
